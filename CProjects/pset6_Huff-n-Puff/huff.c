@@ -1,4 +1,4 @@
-   #include <math.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
         printf("Usage: %s input output\n", argv[0]);
         return 1;
     }
+    printf("opening input\n");
     // open input
     FILE* input = fopen(argv[1],"r");
     if(input == NULL)
@@ -23,28 +24,24 @@ int main(int argc, char* argv[])
         printf("Could not open %s for reading.\n", argv[1]);
         return 1;
     }
-    // open output file
-    Huffile* output = hfopen(argv[2], "w");
-    if (output == NULL)
-    {
-        printf("Could not open %s for writing.\n", argv[2]);
-        return 1;
-    }
+    
     
     // declare header
     Huffeader header;
     
-
+    printf("writing magic number\n");
     //insert magic number
     header.magic = MAGIC;
     char c;
     int checksum = 0;
     int index;
+    printf("initializing frequencies\n");
     for(index = 0;index<SYMBOLS;index++)
     {
         header.frequencies[index] = 0;
         
     }
+    printf("calculating checksum\n");
     while((c = getc(input)) != EOF)
     {
         header.frequencies[(int)c] += 1;
@@ -52,6 +49,14 @@ int main(int argc, char* argv[])
     }
     header.checksum = checksum;
     fclose(input);
+    
+    // open output file
+    Huffile* output = hfopen(argv[2], "w");
+    if (output == NULL)
+    {
+        printf("Could not open %s for writing.\n", argv[2]);
+        return 1;
+    }
     if (hwrite(&header, output) == false)
     {
         hfclose(output);
@@ -89,6 +94,7 @@ int main(int argc, char* argv[])
           break;
         }
     }
+    
     Tree* huffman_tree = pick(f1);
     input = fopen(argv[1],"r");
     if(input == NULL)
@@ -96,11 +102,13 @@ int main(int argc, char* argv[])
         printf("Could not open %s again for reading.\n", argv[1]);
         return 1;
     }
+    printf("huffman tree complete\n");
     Tree* temp = huffman_tree;
     int count_input[SYMBOLS][100];
     int temp_array[100];
     int bit = 1;
     index = 0;
+    printf("traversing the tree\n");
     while(true)
     {   
         temp_array[index] = bit;
@@ -117,9 +125,9 @@ int main(int argc, char* argv[])
         {
             int index1,check=0;
             for(index1 = 0;index1<=index;index1++)
-            {   
+            {   printf("%d",temp_array[index1]);
                 count_input[(int)temp->symbol][index1] = temp_array[index1];
-            }
+            }printf("\n");
             count_input[(int)temp->symbol][index+1] = -1;
             for(index1=0;index1<=index;index1++)
             {
@@ -130,7 +138,16 @@ int main(int argc, char* argv[])
                 break;
             }
             temp = huffman_tree;
-            for(index1=0;index1<index;index1++)
+            int moveup=0,cont_zeros=0;
+            for(index1=index;index1>=0;index1--)
+            {
+                cont_zeros+=temp_array[index1];
+                if(temp_array[index1] == 0 && cont_zeros == 0)
+                {
+                  moveup++;
+                }
+            }
+            for(index1=0;index1<index-moveup;index1++)
             {
                 if(temp_array[index1])
                 {
@@ -142,10 +159,11 @@ int main(int argc, char* argv[])
                 }    
             }
             bit = 0;
-            index -=1; 
+            index -=(1+moveup); 
         }
         index++;
     }
+    printf("traversing complete\n");
     temp=huffman_tree;
     while ((c = getc(input)) != EOF)
     {
